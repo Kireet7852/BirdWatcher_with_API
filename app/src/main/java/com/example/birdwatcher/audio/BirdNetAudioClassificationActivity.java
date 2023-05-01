@@ -46,7 +46,7 @@ public class BirdNetAudioClassificationActivity extends ApiAudioHelperActivity {
     private ListView outputView;
     String clickedName;
     String clickedRecognitionType = "Audio";
-    String Base_url = "http://192.168.0.104:8080/";
+    String Base_url = "http://192.168.43.228:8080/";
 
     @Override
     protected void onCreate(Bundle savedInstance){

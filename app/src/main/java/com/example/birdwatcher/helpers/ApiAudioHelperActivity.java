@@ -1,8 +1,10 @@
 package com.example.birdwatcher.helpers;
 
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.media.AudioAttributes;
 import android.media.MediaPlayer;
@@ -43,6 +45,8 @@ public abstract class ApiAudioHelperActivity extends AppCompatActivity {
     ScheduledExecutorService timer;
     public static final int PICK_FILE =99;
     public static final int RECORD_FILE =100;
+    public final static int REQUEST_RECORD_AUDIO = 2033;
+    public final static int REQUEST_READ_EXTERNAL_STORAGE = 2031;
 
     private MediaRecorder mediaRecorder;
     private String audioFilePath;
@@ -77,6 +81,12 @@ public abstract class ApiAudioHelperActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 showView(recorder);
+                if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, REQUEST_RECORD_AUDIO);
+                }
+                if(checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED){
+                    requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, REQUEST_RECORD_AUDIO);
+                }
 //                record_start = findViewById(R.id.record_start);
 //                record_stop = findViewById(R.id.record_stop);
             }
