@@ -1,10 +1,12 @@
 package com.example.birdwatcher.helpers;
 
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.database.Cursor;
 import android.media.AudioAttributes;
 import android.media.MediaPlayer;
+import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -12,11 +14,15 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
+
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.constraintlayout.widget.ConstraintLayout;
 
 import com.example.birdwatcher.R;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -26,14 +32,21 @@ public abstract class ApiAudioHelperActivity extends AppCompatActivity {
 
     TextView textview2;
     TextView textview3;
-    Button pickAudio;
+    Button pickAudio, recordAudio;
     Button button2;
     SeekBar seekbar1;
+    ConstraintLayout recorder;
+    Button record_start, record_stop;
 
     String duration;
     MediaPlayer mediaPlayer;
     ScheduledExecutorService timer;
     public static final int PICK_FILE =99;
+    public static final int RECORD_FILE =100;
+
+    private MediaRecorder mediaRecorder;
+    private String audioFilePath;
+    private Uri audioFileUri;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,6 +58,10 @@ public abstract class ApiAudioHelperActivity extends AppCompatActivity {
         textview2 = findViewById(R.id.textView2);
         textview3 = findViewById(R.id.textView3);
         seekbar1 = findViewById(R.id.seekbar1);
+        recordAudio = findViewById(R.id.buttonRecordAudio);
+        recorder = findViewById(R.id.constraintRecord);
+        record_start = findViewById(R.id.record_start);
+        record_stop = findViewById(R.id.record_stop);
 
         pickAudio.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -53,6 +70,30 @@ public abstract class ApiAudioHelperActivity extends AppCompatActivity {
                 intent.addCategory(Intent.CATEGORY_OPENABLE);
                 intent.setType("audio/*");
                 startActivityForResult(intent, PICK_FILE);
+            }
+        });
+
+        recordAudio.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                showView(recorder);
+//                record_start = findViewById(R.id.record_start);
+//                record_stop = findViewById(R.id.record_stop);
+            }
+        });
+
+        record_start.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                startRecording();
+            }
+        });
+
+        record_stop.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                stopRecordingAndGetUri();
+                hideView(recorder);
             }
         });
 
@@ -120,9 +161,65 @@ public abstract class ApiAudioHelperActivity extends AppCompatActivity {
                 audioDetection(uri);
             }
         }
+        if (requestCode == RECORD_FILE && resultCode == RESULT_OK){
+            if(data != null){
+                Uri uri = data.getData();
+                createMediaPlayer(uri);
+                audioDetection(uri);
+            }
+        }
     }
 
     protected void audioDetection(Uri selectedAudioUri) {}
+
+    // Start audio recording
+    private void startRecording() {
+        mediaRecorder = new MediaRecorder();
+        mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+        mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+        mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+
+        // Set the output file path
+        audioFilePath = getExternalFilesDir(null).getAbsolutePath() + "/myaudiofile.mp3";
+        mediaRecorder.setOutputFile(audioFilePath);
+
+        try {
+            mediaRecorder.prepare();
+            mediaRecorder.start();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        Toast.makeText(this,"recording started", Toast.LENGTH_LONG).show();
+    }
+
+    // Stop audio recording and get a Uri for the audio file
+    private void stopRecordingAndGetUri() {
+        if (mediaRecorder != null) {
+            mediaRecorder.stop();
+            mediaRecorder.release();
+            mediaRecorder = null;
+
+            // Get a Uri for the audio file
+            File audioFile = new File(audioFilePath);
+            audioFileUri = Uri.fromFile(audioFile);
+            Toast.makeText(this, "audioFileUri is generated", Toast.LENGTH_LONG).show();
+
+            // Notify the media scanner to scan the new file and make it available to other apps
+//            Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+//            mediaScanIntent.setData(audioFileUri);
+//            sendBroadcast(mediaScanIntent);
+//            startActivityForResult(mediaScanIntent, RECORD_FILE);
+//            Intent intent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+//            intent.setData(audioFileUri);
+//            startActivityForResult(intent, RECORD_FILE);
+
+            // Use the audio file Uri for further processing
+            // For example, you can pass the Uri to another activity or store it in a database
+            // using the content provider
+            createMediaPlayer(audioFileUri);
+            audioDetection(audioFileUri);
+        }
+    }
 
     public void createMediaPlayer(Uri uri){
         mediaPlayer = new MediaPlayer();
@@ -151,7 +248,9 @@ public abstract class ApiAudioHelperActivity extends AppCompatActivity {
             mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                 @Override
                 public void onCompletion(MediaPlayer mp) {
-                    releaseMediaPlayer();
+                    //reloadMediaPlayer();
+                    seekbar1.setProgress(0);
+                    button2.setText("Play");
                 }
             });
         } catch (IOException e){
@@ -159,6 +258,7 @@ public abstract class ApiAudioHelperActivity extends AppCompatActivity {
         }
     }
 
+    @SuppressLint("Range")
     public String getNameFromUri(Uri uri){
         String fileName = "";
         Cursor cursor = null;
@@ -180,6 +280,8 @@ public abstract class ApiAudioHelperActivity extends AppCompatActivity {
         releaseMediaPlayer();
     }
 
+
+
     public void releaseMediaPlayer(){
         if (timer != null) {
             timer.shutdown();
@@ -193,5 +295,12 @@ public abstract class ApiAudioHelperActivity extends AppCompatActivity {
         textview3.setText("00:00 / 00:00");
         seekbar1.setMax(100);
         seekbar1.setProgress(0);
+    }
+
+    public static void showView(View view){
+        view.setVisibility(View.VISIBLE);
+    }
+    public static void hideView(View view){
+        view.setVisibility(View.GONE);
     }
 }

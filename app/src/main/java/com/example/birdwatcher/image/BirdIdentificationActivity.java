@@ -135,7 +135,7 @@ public class BirdIdentificationActivity extends MLImageHelperActivity {
 
                             String message = "Name: " + responseModel.getClassName() + ", \n" +
                                     "Scientific Name: " + responseModel.getScientificClassName() + ", \n" +
-                                    "Confidence: " + responseModel.getProbability();
+                                    "Confidence: " + String.format("%.3f", (float)responseModel.getProbability()*100);
 //                            String message = String.valueOf(responseModel);
                             Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
                             if (response.code() != 200) {

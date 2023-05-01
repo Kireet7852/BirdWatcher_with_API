@@ -140,7 +140,7 @@ public class BirdNetAudioClassificationActivity extends ApiAudioHelperActivity {
                             for (AudioResponseModel audio : audioList) {
                                 String result = "Common name: " + audio.getCommonName()
                                         + ", \nScientific name: " + audio.getScientificName()
-                                        + ", \nConfidence: " + audio.getConfidence()
+                                        + ", \nConfidence: " + String.format("%.3f", (float)audio.getConfidence()*100)
                                         + ", \nStart: " + audio.getStart()
                                         + ", End: " + audio.getEnd();
                                 resultList.add(result);
